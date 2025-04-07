@@ -21,7 +21,7 @@ We will create the receiver executable to allow secure receiving on Windows.
 
 4) Verify the Rule:
 - In Windows Powershell, run:
-```powershell
-Get-NetFirewallRule -DisplayName "Allow Secure Receiver Port 12346" | Get-NetFirewallApplicationFilter
+   ```powershell
+   Get-NetFirewallRule -DisplayName "Allow Secure Receiver Port 12346" | Get-NetFirewallApplicationFilter
 
-NOTE) A path to you executable should be shown... ie: C:\...\...\...\secure_receiver.exe
+NOTE: A path to you executable should be shown... ie: C:\...\...\...\secure_receiver.exe
