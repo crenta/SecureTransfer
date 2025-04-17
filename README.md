@@ -1,5 +1,5 @@
 -------------------------------------------------------
-# Securely transfer files over the air with Python
+## Securely transfer files over the air with Python
 
 ## License
 
