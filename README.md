@@ -1,3 +1,6 @@
+-------------------------------------------------------
+# Securely transfer files over the air with Python
+
 ## License
 
 This project is licensed under the MIT License.
@@ -15,8 +18,7 @@ THIS SOFTWARE IS PROVIDED BY [Name of Organization] “AS IS” AND ANY EXPRESS 
 
 
 
-Securely transfer files over the air with Python
--------------------------------------------------------
+--------------------------------------------------------
 # Secure Sender/Receiver with mTLS and Encryption
 
 This project provides two Python scripts (`sender.py` and `receiver.py`) for securely transferring the contents of a folder (`SEND_FOLDER`) from one machine (Sender/Host) to another (Receiver/Target) over a network.
