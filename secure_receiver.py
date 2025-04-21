@@ -148,6 +148,8 @@ def generate_self_signed_cert(cert_path, key_path, ip_address_str):
         messagebox.showerror("Certificate Generation Failed", f"Could not generate receiver TLS certificate/key:\n{e}")
         return False
 
+# --- END Certificate Generation Function ---
+
 # ============================
 # 2. Get Local IP, Generate Certs, Check Sender Cert, Get Decryption Key/Auth Code
 # ============================
