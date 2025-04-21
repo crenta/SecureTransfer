@@ -4,8 +4,6 @@
 PORT="12346"
 PROTO="tcp"
 # This script toggles the simple rule allowing any source to the specified port.
-# Toggling rules specific to an IP (e.g., "allow from 192.168.1.100...") is harder
-# because the delete command needs the same specific details.
 RULE_TO_TOGGLE="${PORT}/${PROTO}"
 RULE_TO_DELETE="allow ${PORT}/${PROTO}" # ufw delete uses 'allow <rule>' format
 
