@@ -63,7 +63,7 @@ KEY_FILE = base_dir / "receiver_key.pem"       # Receiver's own private key
 SENDER_CERT_FILE_TRUSTED = base_dir / "sender_cert.pem" # Sender's public cert (receiver needs this to verify sender)
 # ============================
 
-# --- Certificate Generation Function (for Receiver) ---
+# --- Certificate Generation Function ---
 def generate_self_signed_cert(cert_path, key_path, ip_address_str):
     if cert_path.exists() and key_path.exists():
         print(f"Using existing receiver certificate ({cert_path.name}) and key ({key_path.name})")
@@ -147,12 +147,10 @@ def generate_self_signed_cert(cert_path, key_path, ip_address_str):
     except Exception as e:
         messagebox.showerror("Certificate Generation Failed", f"Could not generate receiver TLS certificate/key:\n{e}")
         return False
-
 # --- END Certificate Generation Function ---
 
-# ============================
-# 2. Get Local IP, Generate Certs, Check Sender Cert, Get Decryption Key/Auth Code
-# ============================
+
+# Get Local IP, Generate Certs, Check Sender Cert, Get Decryption Key/Auth Code
 root = tk.Tk()
 root.withdraw() # Hide the main root window
 
@@ -235,16 +233,12 @@ if not decryption_code:
 print(f"Decryption key received: {decryption_code}. Proceeding to listen...")
 
 
-# ============================
-# 3. Define file paths
-# ============================
+# ------------ Define file paths ---------------
 ENC_FILENAME_BASE = "SECURE_SENDER"
 ENC_PATH = received_folder / f"{ENC_FILENAME_BASE}.enc"
 ZIP_PATH = received_folder / f"{ENC_FILENAME_BASE}.zip"
 
-# ============================
-# 4. Socket Listener & Authentication (mTLS Enabled)
-# ============================
+# ----------- Socket Listener & Authentication (mTLS Enabled) ------------
 cancelled = False
 authenticated_connection = None # Will hold the SECURE socket
 listener_socket = None
@@ -260,11 +254,11 @@ def listen_for_connection(gui_q):
     # --- Create SSL Context for mTLS Server ---
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     try:
-        # 1. Load receiver's own cert/key
+        # Load receiver's own cert/key
         print(f"Loading receiver TLS certificate ({CERT_FILE.name}) and key ({KEY_FILE.name})")
         context.load_cert_chain(certfile=CERT_FILE, keyfile=KEY_FILE)
 
-        # 2. Configure client certificate verification
+        # Configure client certificate verification
         print(f"Configuring TLS to REQUIRE client certificate verification.")
         context.verify_mode = ssl.CERT_REQUIRED
         print(f"Loading trusted sender certificate ({SENDER_CERT_FILE_TRUSTED.name}) for client verification")
@@ -320,7 +314,7 @@ def listen_for_connection(gui_q):
             plain_conn = None
             secure_conn = None
             try:
-                # 1. Accept Plain Connection (Blocks with timeout)
+                # Accept Plain Connection (Blocks with timeout)
                 try:
                     plain_conn, addr = listener_socket.accept()
                 except socket.timeout:
@@ -336,20 +330,20 @@ def listen_for_connection(gui_q):
                 plain_conn.settimeout(20) # Timeout for mTLS handshake and auth
                 print(f"\nConnection attempt from {addr}")
 
-                # 2. Wrap Socket for mTLS (Handshake + Client Cert Verification happens here)
+                # Wrap Socket for mTLS (Handshake + Client Cert Verification happens here)
                 print("Attempting mTLS handshake (verifying sender certificate)...")
                 secure_conn = context.wrap_socket(plain_conn, server_side=True)
                 # Handshake successful if no exception
                 print(f"mTLS handshake successful with {addr}.")
 
-                # Optional: Log sender cert info
+                # Log sender cert info
                 sender_cert = secure_conn.getpeercert()
                 sender_subject = dict(x[0] for x in sender_cert.get('subject', [])) if sender_cert else "N/A"
                 print(f"Verified Sender certificate subject: {sender_subject}")
                 print(f"Cipher used: {secure_conn.cipher()}")
                 print(f"TLS protocol version: {secure_conn.version()}")
 
-                # 3. Authenticate (4-digit code) OVER mTLS
+                # Authenticate (4-digit code) OVER mTLS
                 print("Waiting for 4-digit authentication code...")
                 received_auth_code = secure_conn.recv(4) # Might raise timeout or other errors
 
@@ -417,11 +411,9 @@ def listen_for_connection(gui_q):
         # Put a message if the loop exited without success and wasn't cancelled
         if not authenticated_connection and not cancelled:
              # Check if an error message was already put on the queue by setup exceptions
-             # This is tricky to guarantee, maybe assume setup errors handled it.
              # If the loop breaks unexpectedly, this is a fallback.
              if gui_q.empty(): # Avoid putting extra messages if already errored out
                  gui_q.put(("CLOSED", "Listener loop exited unexpectedly without success."))
-
 
 # --- Create Queue ---
 gui_queue = queue.Queue()
@@ -459,7 +451,7 @@ def cancel_listener_from_status():
         if status_window and status_window.winfo_exists():
             status_window.destroy()
     except tk.TclError as e:
-        print(f"Error destroying status window on cancel: {e}") # Should be rare
+        print(f"Error destroying status window on cancel: {e}")
 
 tk.Button(status_window, text="Cancel Listening", command=cancel_listener_from_status).pack(pady=10)
 status_window.protocol("WM_DELETE_WINDOW", cancel_listener_from_status) # Handle window close button
@@ -497,8 +489,6 @@ def check_queue():
              if status_window and status_window.winfo_exists():
                 status_window.destroy()
                 # status_window = None
-
-        # Add other message types if needed (e.g., "STATUS_UPDATE")
 
     except queue.Empty:
         # No message, queue is empty
@@ -552,17 +542,14 @@ if cancelled:
     sys.exit(1)
 if authenticated_connection is None:
     # This case might happen if the thread ends but didn't put SUCCESS/ERROR
-    # Or if check_queue logic has a flaw. Added more checks in check_queue to prevent this.
+    # Or if check_queue logic has a flaw.
     print("Error: No authenticated mTLS connection received but not cancelled.")
     messagebox.showerror("Error", "No authenticated mTLS connection received.\nCheck sender/receiver certs, IP/Port/Auth Code.\nSee console for details.")
     sys.exit(1)
 
 print("Authenticated mTLS connection established. Proceeding with file reception...")
 
-
-# ============================
-# 5. Receive the Encrypted File (Over mTLS)
-# ============================
+# Receive the Encrypted File (Over mTLS)
 # (uses the secure 'authenticated_connection')
 if authenticated_connection is None:
      messagebox.showerror("Internal Error", "Authenticated connection lost before file reception.")
@@ -570,21 +557,19 @@ if authenticated_connection is None:
 
 try:
     with authenticated_connection: # Use the connection stored by check_queue
-        authenticated_connection.settimeout(60) # Increased timeout for potentially large files
+        authenticated_connection.settimeout(60) # Increase timeout for larger files
         print("Receiving encrypted file over mTLS...")
         bytes_received = 0
         with open(ENC_PATH, 'wb') as f:
             while True:
                 try:
-                    # Check if cancelled during reception (less likely but possible)
+                    # Check if cancelled during reception
                     if cancelled:
                         raise InterruptedError("Reception cancelled by user.")
-                    data = authenticated_connection.recv(4096 * 4) # Slightly larger buffer
+                    data = authenticated_connection.recv(4096 * 4)
                     if not data: break # Sender closed connection cleanly
                     f.write(data)
                     bytes_received += len(data)
-                    # Optional: Add progress indicator here if desired
-                    # print(f"\rReceived: {bytes_received} bytes", end="")
                 except socket.timeout:
                     messagebox.showerror("Error", "Timeout during file reception. Connection may be lost.")
                     raise # Re-raise to be caught by outer block
@@ -600,7 +585,6 @@ try:
         print(f"\nFile reception complete. Total bytes: {bytes_received}")
         if bytes_received == 0 and not cancelled:
              messagebox.showwarning("Reception Warning", f"Received 0 bytes from sender. Encrypted file '{ENC_PATH.name}' is empty.")
-             # Keep the empty ENC_PATH for decryption step to handle it
 
 except InterruptedError:
      # Handle cancellation during reception
@@ -611,12 +595,8 @@ except Exception as e:
     messagebox.showerror("Reception Failed", f"An error occurred during file reception: {type(e).__name__}: {e}")
     if ENC_PATH.exists(): ENC_PATH.unlink(missing_ok=True)
     sys.exit(1)
-# Note: The 'authenticated_connection' is automatically closed by the 'with' statement here
 
-
-# ============================
-# 6. Decrypt the Received File
-# ============================
+# Decrypt the Received File
 print("Decrypting file...")
 try:
     # Check if the encrypted file exists before trying to read
@@ -628,7 +608,7 @@ try:
          sys.exit(1)
 
     data = ENC_PATH.read_bytes()
-    if len(data) < 17: # Basic check: need at least 16 for salt + 1 for ciphertext
+    if len(data) < 17:
         if len(data) == 0:
             messagebox.showwarning("Decryption Skipped", f"Received encrypted file '{ENC_PATH.name}' is empty. Nothing to decrypt.")
             # Clean up empty files
@@ -641,7 +621,7 @@ try:
 
     salt, ciphertext = data[:16], data[16:]
     clean = decryption_code.replace('-', '')
-    kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=200_000) # Increased iterations slightly
+    kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=200_000)
     key = base64.urlsafe_b64encode(kdf.derive(clean.encode()))
     cipher = Fernet(key)
     decrypted_data = cipher.decrypt(ciphertext)
@@ -652,7 +632,7 @@ except InvalidToken:
     messagebox.showerror("Decryption Failed", "Invalid DECRYPTION key or the received file is corrupted/incomplete.")
     if ZIP_PATH.exists(): ZIP_PATH.unlink(missing_ok=True) # Clean up potentially bad zip
     sys.exit(1)
-except ValueError as e: # Catch the "too short" or other value errors
+except ValueError as e: # Catch "too short" or other value errors
     messagebox.showerror("Decryption Failed", f"Error processing received file: {e}")
     sys.exit(1)
 except Exception as e:
@@ -663,10 +643,7 @@ finally:
     # Clean up the encrypted file after attempting decryption
     if ENC_PATH.exists(): ENC_PATH.unlink(missing_ok=True)
 
-
-# ============================
-# 7. Unzip the Decrypted File
-# ============================
+# Unzip the Decrypted File
 if not ZIP_PATH.exists():
       messagebox.showerror("Unzip Error", f"Decrypted file '{ZIP_PATH.name}' not found. Cannot unzip.")
       sys.exit(1)
