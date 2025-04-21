@@ -93,7 +93,7 @@ def generate_self_signed_cert(cert_path, key_path, ip_address_str):
             x509.NameAttribute(NameOID.LOCALITY_NAME, u"City"), # Optional
             x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"SecureReceiver"), # Optional
             # Use IP address in Common Name (CN) OR preferably Subject Alternative Name (SAN)
-            # x509.NameAttribute(NameOID.COMMON_NAME, ip_address_str), # Less preferred for IPs
+            # x509.NameAttribute(NameOID.COMMON_NAME, ip_address_str)
         ])
 
         # Build certificate
