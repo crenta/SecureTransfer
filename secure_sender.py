@@ -106,9 +106,7 @@ def get_ip_and_auth_code(root):
 
     return result
 
-# ======================================
 # --- Certificate Generation Function (for Sender) ---
-# ======================================
 def generate_self_signed_cert(cert_path, key_path, common_name="SecureSenderClient"):
     """Generates a self-signed certificate and private key if they don't exist."""
     if cert_path.exists() and key_path.exists():
@@ -147,7 +145,7 @@ def generate_self_signed_cert(cert_path, key_path, common_name="SecureSenderClie
             datetime.datetime.now(datetime.timezone.utc)
         ).not_valid_after(
             datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=365)
-        ).add_extension( # Basic constraints typical for end-entity certs
+        ).add_extension(
             x509.BasicConstraints(ca=False, path_length=None), critical=True,
         ).sign(private_key, hashes.SHA256()) # Sign
 
@@ -166,10 +164,7 @@ def generate_self_signed_cert(cert_path, key_path, common_name="SecureSenderClie
         messagebox.showerror("Certificate Generation Failed", f"Could not generate sender TLS certificate/key:\n{e}")
         return False
 
-# ======================================
-# --- Main Script Logic Starts Here ---
-# ======================================
-
+# --- Main Script Logic ---
 # GUI root hidden
 root = tk.Tk()
 root.withdraw()
@@ -268,11 +263,11 @@ try:
     context.check_hostname = True # Verify receiver's hostname/IP in cert
     context.verify_mode = ssl.CERT_REQUIRED # Require receiver cert validation
 
-    # 1. Load CA cert to verify the RECEIVER
+    # Load CA cert to verify the RECEIVER
     print(f"Loading receiver certificate for verification from: {RECEIVER_CERT_FILE}")
     context.load_verify_locations(cafile=RECEIVER_CERT_FILE)
 
-    # 2. Load sender's own cert/key to present for client authentication
+    # Load sender's own cert/key to present for client authentication
     print(f"Loading sender certificate ({SENDER_CERT_FILE.name}) and key ({SENDER_KEY_FILE.name}) for client authentication")
     context.load_cert_chain(certfile=SENDER_CERT_FILE, keyfile=SENDER_KEY_FILE)
 
@@ -329,7 +324,7 @@ except ssl.SSLError as e:
          msg += "- Diffie-Hellman key agreement error. May indicate issue on receiver side or network interference.\n"
     elif "No certificate returned" in error_details:
          msg += "- The receiver did not return a certificate, but one was expected.\n"
-    else: # General advice
+    else:
          msg += "- Ensure receiver is running, expecting mTLS on port {TLS_PORT}.\n- Check firewalls on both ends for port {TLS_PORT}.\n- Ensure compatible TLS versions/settings.\n- Verify both sender and receiver certificates are correctly loaded and trusted by the other party."
     messagebox.showerror("mTLS Handshake Error", msg)
     sys.exit(1)
@@ -341,7 +336,7 @@ except socket.gaierror as e:
      sys.exit(1)
 except ConnectionRefusedError as e:
     msg = f"Connection refused by {target_ip}:{TLS_PORT}."
-    if "Authentication failed" in str(e): # Catch our custom auth failure
+    if "Authentication failed" in str(e): # Catch custom auth failure
         msg = f"Authentication Failed: Receiver at {target_ip}:{TLS_PORT} rejected the 4-digit code."
     else: # Standard connection refused
         msg += f"\n- Ensure receiver script is running and expecting mTLS on port {TLS_PORT}.\n- Check firewall allows port {TLS_PORT}."
